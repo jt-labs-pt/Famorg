@@ -3,216 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Famorg - O Teu Horário Familiar</title>
+    <title>Famorg - GPS & Agenda</title>
     <style>
         :root {
             --primary: #6c5ce7;
-            --accent: #a29bfe;
-            --bg: #f8f9fd;
-            --event-once: #fab1a0;
-            --event-repeat: #55efc4;
+            --bg: #fdfbff;
+            --card: #ffffff;
+            --text: #2d3436;
         }
 
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: #2d3436; }
-        
-        header { background: white; padding: 25px; border-radius: 0 0 30px 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; }
-        h1 { margin: 0; color: var(--primary); font-size: 24px; }
-        .current-day { font-size: 12px; text-transform: uppercase; color: var(--accent); font-weight: 800; letter-spacing: 1px; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--text); padding-top: 130px; }
 
-        /* Timeline Layout */
-        .agenda-container { max-width: 500px; margin: 20px auto; padding: 0 15px; }
+        /* HEADER FIXO COM DIAS DA SEMANA */
+        header { 
+            position: fixed; top: 0; width: 100%; background: white; z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center;
+        }
+        .days-bar { 
+            display: flex; justify-content: space-around; padding: 15px 5px; 
+            border-top: 1px solid #eee; overflow-x: auto;
+        }
+        .day-btn { 
+            padding: 8px 12px; border-radius: 12px; border: none; background: #f1f1f1;
+            font-size: 11px; font-weight: 800; color: #b2bec3; cursor: pointer; transition: 0.3s;
+        }
+        .day-btn.active { background: var(--primary); color: white; transform: scale(1.1); }
+
+        /* TIMELINE LAYOUT */
+        .timeline { padding: 20px; max-width: 500px; margin: 0 auto; }
         
-        .timeline-item {
-            display: flex; gap: 15px; margin-bottom: 20px; position: relative;
+        .slot { display: flex; gap: 15px; margin-bottom: 25px; position: relative; }
+        .slot::before { 
+            content: ''; position: absolute; left: 25px; top: 40px; 
+            width: 2px; height: calc(100% + 10px); background: #eee; z-index: -1;
+        }
+        .slot:last-child::before { display: none; }
+
+        .time { min-width: 50px; font-weight: 900; color: var(--primary); font-size: 14px; padding-top: 10px; }
+
+        .card { 
+            background: var(--card); flex: 1; border-radius: 20px; padding: 15px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.04); border: 1px solid #f0f0f0;
+            display: flex; flex-direction: column; gap: 10px;
         }
 
-        .time-sidebar { min-width: 55px; text-align: right; font-weight: 800; color: var(--primary); font-size: 16px; padding-top: 5px; }
+        .card-top { display: flex; align-items: center; gap: 12px; }
+        .child-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #a29bfe; }
+        
+        .info h3 { margin: 0; font-size: 16px; }
+        .info p { margin: 2px 0; font-size: 12px; color: #636e72; }
 
-        .event-card {
-            background: white; flex: 1; border-radius: 20px; padding: 15px;
-            display: flex; align-items: center; gap: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
-            border-left: 5px solid var(--primary);
+        /* BOTÃO IR (GPS) */
+        .btn-go { 
+            background: #55efc4; color: #00b894; border: none; padding: 8px; 
+            border-radius: 10px; font-weight: 800; font-size: 11px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
         }
 
-        .event-card.once { border-left-color: var(--event-once); }
-        .event-card.repeat { border-left-color: var(--event-repeat); }
-
-        .child-pic { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #eee; }
-        
-        .event-info { flex: 1; }
-        .event-info strong { display: block; font-size: 15px; }
-        .event-info span { font-size: 11px; color: #636e72; display: flex; align-items: center; gap: 4px; }
-
-        /* Floating Button */
-        .fab {
+        /* BOTÃO + */
+        .fab { 
             position: fixed; bottom: 30px; right: 25px; width: 60px; height: 60px;
-            background: var(--primary); color: white; border-radius: 50%;
-            border: none; font-size: 30px; box-shadow: 0 10px 20px rgba(108, 92, 231, 0.4);
-            cursor: pointer; z-index: 100;
+            background: var(--primary); color: white; border-radius: 50%; border: none;
+            font-size: 30px; box-shadow: 0 10px 20px rgba(108,92,231,0.3); z-index: 1001;
         }
 
-        /* Modal */
-        #modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200;
-            justify-content: center; align-items: flex-end;
+        /* MODAL */
+        #modal { 
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.5); z-index: 2000; align-items: flex-end;
         }
-        .modal-body {
-            background: white; width: 100%; max-width: 500px; padding: 25px;
-            border-radius: 30px 30px 0 0; box-sizing: border-box;
-        }
-
-        input, select { width: 100%; padding: 12px; margin: 8px 0 15px 0; border: 2px solid #f1f1f1; border-radius: 12px; font-size: 15px; }
-        .row { display: flex; gap: 10px; }
-        .btn-add { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; }
-
-        .tag { padding: 2px 6px; border-radius: 4px; font-size: 9px; color: white; font-weight: bold; text-transform: uppercase; }
-        .tag-once { background: var(--event-once); }
-        .tag-repeat { background: var(--event-repeat); }
+        .modal-content { background: white; width: 100%; padding: 30px; border-radius: 30px 30px 0 0; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 12px; }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="current-day" id="todayText">Segunda-feira</div>
-    <h1>Famorg Agenda 🏠</h1>
+    <h2 style="margin: 10px 0; color: var(--primary);">Famorg</h2>
+    <div class="days-bar" id="daysBar">
+        <button class="day-btn" onclick="setDay(1)">SEG</button>
+        <button class="day-btn" onclick="setDay(2)">TER</button>
+        <button class="day-btn" onclick="setDay(3)">QUA</button>
+        <button class="day-btn" onclick="setDay(4)">QUI</button>
+        <button class="day-btn" onclick="setDay(5)">SEX</button>
+        <button class="day-btn" onclick="setDay(6)">SAB</button>
+        <button class="day-btn" onclick="setDay(0)">DOM</button>
+    </div>
 </header>
 
-<div class="agenda-container" id="agenda">
-    </div>
+<div class="timeline" id="agendaList"></div>
 
-<button class="fab" onclick="showModal()">+</button>
+<button class="fab" onclick="document.getElementById('modal').style.display='flex'">+</button>
 
-<div id="modal" onclick="if(event.target==this) hideModal()">
-    <div class="modal-body">
-        <h3 style="margin-top:0">Nova Atividade</h3>
-        
-        <label>Quem?</label>
-        <select id="kidSelect"></select>
-
-        <label>O que vai acontecer?</label>
-        <input type="text" id="taskTitle" placeholder="Ex: Escola, Judo, Dentista...">
-
-        <div class="row">
-            <div style="flex:1">
-                <label>Hora</label>
-                <input type="time" id="taskTime">
-            </div>
-            <div style="flex:1">
-                <label>Tipo</label>
-                <select id="taskType" onchange="toggleDaySelect()">
-                    <option value="once">📍 Só uma vez</option>
-                    <option value="repeat">🔁 Repetitivo</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="daySelectDiv" style="display:none">
-            <label>Dia da Semana</label>
-            <select id="taskDay">
-                <option value="1">Segunda-feira</option>
-                <option value="2">Terça-feira</option>
-                <option value="3">Quarta-feira</option>
-                <option value="4">Quinta-feira</option>
-                <option value="5">Sexta-feira</option>
-                <option value="6">Sábado</option>
-                <option value="0">Domingo</option>
-            </select>
-        </div>
-
-        <button class="btn-add" onclick="addEvent()">Adicionar ao Horário</button>
+<div id="modal" onclick="if(event.target==this) this.style.display='none'">
+    <div class="modal-content">
+        <h3>Agendar Atividade</h3>
+        <select id="kidIn"></select>
+        <input type="text" id="taskIn" placeholder="O que vai fazer? (Ex: Judo)">
+        <input type="time" id="timeIn">
+        <input type="text" id="addressIn" placeholder="Morada ou Local (Opcional)">
+        <select id="typeIn">
+            <option value="repeat">🔁 Repetitivo</option>
+            <option value="once">📍 Só uma vez</option>
+        </select>
+        <button onclick="save()" style="width:100%; background:var(--primary); color:white; padding:15px; border:none; border-radius:12px; font-weight:800;">GUARDAR</button>
     </div>
 </div>
 
 <script>
-    let events = JSON.parse(localStorage.getItem('famorg_v4')) || [];
+    let events = JSON.parse(localStorage.getItem('famorg_v5')) || [];
     let kids = JSON.parse(localStorage.getItem('sonation_kids')) || [];
+    let currentViewDay = new Date().getDay();
 
     window.onload = () => {
-        const dias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-        document.getElementById('todayText').innerText = dias[new Date().getDay()];
-        
+        setDay(currentViewDay);
         loadKids();
-        renderAgenda();
     };
 
     function loadKids() {
-        const s = document.getElementById('kidSelect');
-        kids.forEach(k => s.innerHTML += `<option value="${k.id}">${k.nome}</option>`);
+        const sel = document.getElementById('kidIn');
+        kids.forEach(k => sel.innerHTML += `<option value="${k.id}">${k.nome}</option>`);
     }
 
-    function toggleDaySelect() {
-        const type = document.getElementById('taskType').value;
-        document.getElementById('daySelectDiv').style.display = type === 'repeat' ? 'block' : 'none';
-    }
-
-    function addEvent() {
-        const kidId = document.getElementById('kidSelect').value;
-        const title = document.getElementById('taskTitle').value;
-        const time = document.getElementById('taskTime').value;
-        const type = document.getElementById('taskType').value;
-        const day = document.getElementById('taskDay').value;
-
-        if(!kidId || !title || !time) return alert("Preenche tudo!");
-
-        const kid = kids.find(k => k.id == kidId);
-        const newEv = { id: Date.now(), kidName: kid.nome, kidFoto: kid.foto, title, time, type, day };
-
-        events.push(newEv);
-        localStorage.setItem('famorg_v4', JSON.stringify(events));
-        renderAgenda();
-        hideModal();
-    }
-
-    function renderAgenda() {
-        const container = document.getElementById('agenda');
-        const today = new Date().getDay();
-        
-        // Filtramos: o que é repetitivo de hoje + o que é "só uma vez"
-        let todayEvents = events.filter(ev => {
-            return ev.type === 'once' || (ev.type === 'repeat' && ev.day == today);
+    function setDay(d) {
+        currentViewDay = d;
+        document.querySelectorAll('.day-btn').forEach((btn, idx) => {
+            btn.classList.toggle('active', [1,2,3,4,5,6,0][idx] === d);
         });
+        render();
+    }
 
-        todayEvents.sort((a,b) => a.time.localeCompare(b.time));
+    function save() {
+        const kid = kids.find(k => k.id == document.getElementById('kidIn').value);
+        const ev = {
+            id: Date.now(),
+            kidName: kid ? kid.nome : "Geral",
+            kidFoto: kid ? kid.foto : "",
+            task: document.getElementById('taskIn').value,
+            time: document.getElementById('timeIn').value,
+            address: document.getElementById('addressIn').value,
+            type: document.getElementById('typeIn').value,
+            day: currentViewDay
+        };
+        events.push(ev);
+        localStorage.setItem('famorg_v5', JSON.stringify(events));
+        document.getElementById('modal').style.display = 'none';
+        render();
+    }
 
-        if(todayEvents.length === 0) {
-            container.innerHTML = `<center style="margin-top:50px; color:#b2bec3">Nada agendado para hoje.</center>`;
-            return;
-        }
+    function render() {
+        const list = document.getElementById('agendaList');
+        list.innerHTML = '';
 
-        container.innerHTML = '';
-        todayEvents.forEach(ev => {
-            container.innerHTML += `
-                <div class="timeline-item">
-                    <div class="time-sidebar">${ev.time}</div>
-                    <div class="event-card ${ev.type}">
-                        <img src="${ev.kidFoto || 'https://via.placeholder.com/50'}" class="child-pic">
-                        <div class="event-info">
-                            <strong>${ev.title}</strong>
-                            <span>
-                                <span class="tag ${ev.type === 'once' ? 'tag-once' : 'tag-repeat'}">
-                                    ${ev.type === 'once' ? '📍 ÚNICO' : '🔁 ROTINA'}
-                                </span>
-                                ${ev.kidName}
-                            </span>
+        // Filtra: Eventos do dia selecionado OU eventos únicos (que mostramos em todos os dias para não esquecer)
+        const filtered = events.filter(e => e.day == currentViewDay || e.type === 'once');
+        filtered.sort((a,b) => a.time.localeCompare(b.time));
+
+        filtered.forEach(e => {
+            list.innerHTML += `
+                <div class="slot">
+                    <div class="time">${e.time}</div>
+                    <div class="card">
+                        <div class="card-top">
+                            <img src="${e.kidFoto || 'https://via.placeholder.com/50'}" class="child-img">
+                            <div class="info">
+                                <h3>${e.task}</h3>
+                                <p>${e.kidName} ${e.type === 'once' ? '📍' : '🔁'}</p>
+                            </div>
                         </div>
-                        <button onclick="removeEv(${ev.id})" style="border:none; background:none; color:#ddd">✕</button>
+                        ${e.address ? `
+                            <button class="btn-go" onclick="openGPS('${e.address}')">
+                                🚗 IR PARA O LOCAL
+                            </button>
+                        ` : ''}
+                        <button onclick="remove(${e.id})" style="border:none; background:none; color:#eee; font-size:10px; align-self:flex-end;">REMOVER</button>
                     </div>
                 </div>
             `;
         });
     }
 
-    function removeEv(id) {
-        events = events.filter(e => e.id !== id);
-        localStorage.setItem('famorg_v4', JSON.stringify(events));
-        renderAgenda();
+    function openGPS(address) {
+        const encoded = encodeURIComponent(address);
+        // Link universal que o telemóvel interpreta e pergunta qual App abrir
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank');
     }
 
-    function showModal() { document.getElementById('modal').style.display = 'flex'; }
-    function hideModal() { document.getElementById('modal').style.display = 'none'; }
+    function remove(id) {
+        events = events.filter(e => e.id !== id);
+        localStorage.setItem('famorg_v5', JSON.stringify(events));
+        render();
+    }
 </script>
-
 </body>
 </html>
