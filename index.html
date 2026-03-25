@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Famorg - Agenda Familiar</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --sonation: #89cff0;
+            --bg: #fdfbff;
+            --text: #2d3436;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            color: var(--text);
+            padding-bottom: 100px; /* Espaço para o botão */
+        }
+
+        /* Header Elegante */
+        header {
+            background: white;
+            padding: 30px 20px;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            text-align: center;
+        }
+
+        .date-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--secondary);
+            font-weight: 800;
+        }
+
+        h1 { margin: 5px 0; font-size: 28px; color: var(--primary); }
+
+        /* Timeline / Horário */
+        .timeline {
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.05);
+            border: 1px solid #f0f0f0;
+            position: relative;
+        }
+
+        .time-box {
+            text-align: center;
+            min-width: 60px;
+            border-right: 2px solid #f1f1f1;
+            padding-right: 15px;
+        }
+
+        .time-box strong { font-size: 18px; color: var(--primary); display: block; }
+        .time-box span { font-size: 10px; color: #b2bec3; font-weight: bold; }
+
+        .child-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--sonation);
+        }
+
+        .event-info { flex: 1; }
+        .event-info h3 { margin: 0; font-size: 16px; color: #2d3436; }
+        .event-info p { margin: 2px 0 0 0; font-size: 13px; color: #636e72; font-weight: 500; }
+
+        /* Botão Flutuante (+) */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 65px;
+            height: 65px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            border: none;
+            box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4);
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        /* Modal de Adicionar (Escondido) */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            z-index: 200;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+            box-sizing: border-box;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        input, select {
+            width: 100%; padding: 15px; margin: 10px 0;
+            border: 2px solid #f1f1f1; border-radius: 15px; font-size: 16px;
+        }
+
+        .btn-save {
+            background: var(--primary); color: white; border: none;
+            width: 100%; padding: 18px; border-radius: 15px;
+            font-size: 18px; font-weight: bold; margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center; margin-top: 100px; color: #b2bec3;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="date-title" id="currentDate">Segunda, 20 Março</div>
+    <h1>Famorg Agenda</h1>
+</header>
+
+<div class="timeline" id="timelineList">
+    </div>
+
+<button class="fab" onclick="openModal()">+</button>
+
+<div id="modal" onclick="if(event.target == this) closeModal()">
+    <div class="modal-content">
+        <h2 style="margin-top:0; color:var(--primary)">Novo Evento</h2>
+        
+        <label style="font-size: 12px; font-weight: bold;">CRIANÇA (SONATION)</label>
+        <select id="childInput">
+            <option value="">Escolher Filho...</option>
+        </select>
+
+        <label style="font-size: 12px; font-weight: bold;">O QUE VAI FAZER?</label>
+        <input type="text" id="titleInput" placeholder="Ex: Natação, Dentista, Festa">
+
+        <label style="font-size: 12px; font-weight: bold;">HORÁRIO</label>
+        <input type="time" id="timeInput">
+
+        <button class="btn-save" onclick="saveEvent()">Agendar Agora</button>
+        <button onclick="closeModal()" style="width:100%; background:none; border:none; margin-top:10px; color:#b2bec3;">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    let events = JSON.parse(localStorage.getItem('famorg_v3')) || [];
+    let kids = JSON.parse(localStorage.getItem('sonation_kids')) || [];
+
+    window.onload = () => {
+        // Atualizar data no topo
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('pt-PT', options);
+        
+        loadKids();
+        renderTimeline();
+    };
+
+    function loadKids() {
+        const select = document.getElementById('childInput');
+        kids.forEach(k => {
+            select.innerHTML += `<option value="${k.id}">${k.nome}</option>`;
+        });
+    }
+
+    function openModal() { document.getElementById('modal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+    function saveEvent() {
+        const kidId = document.getElementById('childInput').value;
+        const title = document.getElementById('titleInput').value;
+        const time = document.getElementById('timeInput').value;
+
+        if(!kidId || !title || !time) return alert("Preencha todos os campos!");
+
+        const kidObj = kids.find(k => k.id == kidId);
+        
+        const newEvent = {
+            id: Date.now(),
+            kidName: kidObj.nome,
+            kidFoto: kidObj.foto,
+            title: title,
+            time: time
+        };
+
+        events.push(newEvent);
+        localStorage.setItem('famorg_v3', JSON.stringify(events));
+        
+        renderTimeline();
+        closeModal();
+        
+        // Limpar campos
+        document.getElementById('titleInput').value = '';
+        document.getElementById('timeInput').value = '';
+    }
+
+    function renderTimeline() {
+        const container = document.getElementById('timelineList');
+        if(events.length === 0) {
+            container.innerHTML = `<div class="empty-state">O teu dia está livre!<br>Clica no + para agendar atividades.</div>`;
+            return;
+        }
+
+        events.sort((a,b) => a.time.localeCompare(b.time));
+
+        container.innerHTML = '';
+        events.forEach(ev => {
+            container.innerHTML += `
+                <div class="event-card">
+                    <div class="time-box">
+                        <strong>${ev.time}</strong>
+                        <span>HOJE</span>
+                    </div>
+                    <img src="${ev.kidFoto || 'https://via.placeholder.com/50'}" class="child-thumb">
+                    <div class="event-info">
+                        <h3>${ev.title}</h3>
+                        <p>${ev.kidName}</p>
+                    </div>
+                    <button onclick="deleteEvent(${ev.id})" style="border:none; background:none; color:#dfe6e9; font-size:20px;">×</button>
+                </div>
+            `;
+        });
+    }
+
+    function deleteEvent(id) {
+        events = events.filter(e => e.id !== id);
+        localStorage.setItem('famorg_v3', JSON.stringify(events));
+        renderTimeline();
+    }
+</script>
+
+</body>
+</html>
